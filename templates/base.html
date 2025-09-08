@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Flask HTMX App{% endblock %}</title>
+    
+    <!-- Basic styling to replace Bootstrap -->
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8f9fa; 
+            margin: 0; 
+            padding: 0;
+        }
+        .navbar { 
+            background-color: #343a40; 
+            color: white; 
+            padding: 1rem; 
+            margin-bottom: 2rem;
+        }
+        .navbar a { color: white; text-decoration: none; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+        .card { 
+            background: white; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+            overflow: hidden;
+        }
+        .card-header { 
+            background-color: #007bff; 
+            color: white; 
+            padding: 1rem; 
+            margin: 0;
+        }
+        .card-body { padding: 1.5rem; }
+        .card-footer { 
+            background-color: #f8f9fa; 
+            padding: 1rem; 
+            font-size: 0.875rem; 
+            color: #6c757d;
+        }
+        .form-control { 
+            width: 100%; 
+            padding: 0.75rem; 
+            border: 1px solid #ced4da; 
+            border-radius: 4px; 
+            font-size: 1rem;
+        }
+        .form-label { 
+            display: block; 
+            margin-bottom: 0.5rem; 
+            font-weight: 500;
+        }
+        .mb-3 { margin-bottom: 1rem; }
+        .btn { 
+            padding: 0.75rem 1.5rem; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            text-decoration: none; 
+            display: inline-block;
+            text-align: center;
+            font-size: 1rem;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-outline-primary { 
+            background-color: transparent; 
+            color: #007bff; 
+            border: 1px solid #007bff; 
+        }
+        .btn-outline-danger { 
+            background-color: transparent; 
+            color: #dc3545; 
+            border: 1px solid #dc3545; 
+        }
+        .d-grid { display: grid; }
+        .alert { 
+            padding: 0.75rem 1rem; 
+            margin-bottom: 1rem; 
+            border-radius: 4px; 
+        }
+        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .text-success { color: #28a745; }
+        .text-muted { color: #6c757d; }
+        .mt-3 { margin-top: 1rem; }
+        .row { display: flex; flex-wrap: wrap; margin: -0.5rem; }
+        .col-12 { flex: 0 0 100%; padding: 0.5rem; }
+        .col-md-6 { flex: 0 0 50%; padding: 0.5rem; }
+        .col-md-8 { flex: 0 0 66.666%; padding: 0.5rem; }
+        .col-md-4 { flex: 0 0 33.333%; padding: 0.5rem; }
+    </style>
+    
+    <!-- Simple HTMX-like functionality with vanilla JS -->
+    <script>
+        // Basic HTMX-like functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle forms with hx-post attribute
+            document.querySelectorAll('form[hx-post]').forEach(function(form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const target = document.querySelector(form.getAttribute('hx-target'));
+                    const url = form.getAttribute('hx-post');
+                    const formData = new FormData(form);
+                    
+                    // Show loading indicator
+                    const indicator = document.querySelector(form.getAttribute('hx-indicator'));
+                    if (indicator) {
+                        indicator.style.display = 'block';
+                    }
+                    
+                    fetch(url, {
+                        method: 'POST',
+                        headers: { 'HX-Request': 'true' },
+                        body: formData
+                    })
+                    .then(response => response.text())
+                    .then(data => {
+                        if (target) {
+                            target.innerHTML = data;
+                        }
+                        // Hide loading indicator
+                        if (indicator) {
+                            indicator.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        if (target) {
+                            target.innerHTML = '<div class="alert alert-danger">An error occurred. Please try again.</div>';
+                        }
+                        if (indicator) {
+                            indicator.style.display = 'none';
+                        }
+                    });
+                });
+            });
+            
+            // Handle elements with hx-get attribute
+            document.querySelectorAll('[hx-get]').forEach(function(element) {
+                const trigger = element.getAttribute('hx-trigger') || 'click';
+                if (trigger.includes('load')) {
+                    // Trigger on load
+                    handleHxGet(element);
+                }
+                if (trigger.includes('click')) {
+                    element.addEventListener('click', function() {
+                        handleHxGet(element);
+                    });
+                }
+            });
+        });
+        
+        function handleHxGet(element) {
+            const target = document.querySelector(element.getAttribute('hx-target'));
+            const url = element.getAttribute('hx-get');
+            
+            if (target && url) {
+                fetch(url, {
+                    headers: { 'HX-Request': 'true' }
+                })
+                .then(response => response.text())
+                .then(data => {
+                    target.innerHTML = data;
+                })
+                .catch(error => {
+                    target.innerHTML = '<span class="text-muted">Error loading content</span>';
+                });
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+        }
+        .dashboard-container {
+            max-width: 800px;
+            margin: 50px auto;
+        }
+        .htmx-indicator {
+            opacity: 0;
+            transition: opacity 500ms ease-in;
+        }
+        .htmx-request .htmx-indicator {
+            opacity: 1;
+        }
+        .htmx-request.htmx-indicator {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Flask HTMX Login</a>
+            <div class="navbar-nav ms-auto">
+                <div id="login-status" hx-get="{{ url_for('status') }}" hx-trigger="load, every 5s">
+                    <!-- Login status will be loaded here -->
+                </div>
+                {% if session.username %}
+                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="row">
+            <div class="col-12">
+                {% for message in messages %}
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+
+    <!-- End of content -->
+    </div>
+</body>
+</html>
